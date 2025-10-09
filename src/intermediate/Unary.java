@@ -1,4 +1,4 @@
-package interm;
+package intermediate;
 import lexer.*;
 import symbol.*;
 

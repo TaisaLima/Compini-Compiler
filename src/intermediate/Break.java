@@ -1,4 +1,4 @@
-package interm;
+package intermediate;
 
 public class Break extends Stmt{
     Stmt stmt;

@@ -1,6 +1,5 @@
-int soma(int a, int b) {
-  return a + b;
-}
+{
 int resultado;
-resultado = soma(2, 3);
+resultado = 5;
 print(resultado);
+}

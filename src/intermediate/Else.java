@@ -1,4 +1,4 @@
-package interm;
+package intermediate;
 import symbol.*;
 
 public class Else extends Stmt {

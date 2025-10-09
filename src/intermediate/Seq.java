@@ -1,4 +1,4 @@
-package interm;
+package intermediate;
 
 public class Seq extends Stmt{
     Stmt stmt1;

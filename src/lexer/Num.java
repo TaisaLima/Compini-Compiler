@@ -1,6 +1,5 @@
 package lexer;
 
-//Token dedicado aos números
 public class Num extends Token{
     public final int valor;
     public Num(int val){

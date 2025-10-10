@@ -10,7 +10,7 @@ public class TestParser {
     public static void main(String[] args) throws Exception {
         System.out.println("=== Iniciando Testes de Parser ===");
         
-        // 1. Testar Arquivos Válidos (DEVE PASSAR)
+
         runTests("src/tests/valids", true);
         
         // 2. Testar Arquivos Inválidos (DEVE FALHAR)
@@ -39,14 +39,12 @@ public class TestParser {
             boolean passed = runSingleTest(file);
 
             if (shouldPass) {
-                // Caso: Esperava passar
                 if (passed) {
                     System.out.println("SUCESSO");
                 } else {
                     System.out.println("FALHA INESPERADA! (Erro de Sintaxe encontrado)");
                 }
             } else {
-                // Caso: Esperava falhar
                 if (!passed) {
                     System.out.println("SUCESSO.(Erro de Sintaxe capturado)");
                 } else {
@@ -63,11 +61,10 @@ public class TestParser {
             
             parser.program(); 
             
-            // Se chegou aqui, passou
+            // Se chegou aqui passou
             return true;
             
         } catch (Error e) {
-            // Captura o erro lançado pelo parser (syntaxError)
            System.out.println("Detalhe: " + e.getMessage()); 
             return false;
         } catch (IOException e) {

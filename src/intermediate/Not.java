@@ -1,4 +1,4 @@
-package intermediate; // Arquivo Not.java
+package intermediate; 
 import lexer.*;
 import symbol.*;
 

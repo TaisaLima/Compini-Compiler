@@ -1,15 +1,15 @@
-package parser; 
+package parser;
 
 import java.io.*;
 import lexer.*;
 import symbol.*;
-import intermediate.*; 
+import intermediate.*;
 
 public class Parser {
     private Lexer lex; 
     private Token look; 
     Env top = null; 
-    int used = 0; // deslocamento de memória
+    int used = 0;
 
     public Parser(Lexer l) throws IOException {
         lex = l;
@@ -20,31 +20,30 @@ public class Parser {
         look = lex.nextToken(); 
     }
 
-
     void error(String s) {
         throw new Error("near line " + lex.line + ": " + s);
     }
 
     void match(int t) throws IOException {
-    if (look.tag == t) move();
-    else error("syntax error: esperado " + (char)t + " / obtido " + look);
+        if (look.tag == t) move();
+        else error("syntax error: esperado " + (char)t + " / obtido " + look);
     }
 
-
     public void program() throws IOException {
-       
         Env savedEnv = top;
         top = new Env(top);
 
         decls();
-        
+
         Stmt s = stmts();
-        
+
         if (s != Stmt.Null) {
             int begin = s.newlabel(); 
             int after = s.newlabel();
-            s.emitlabel(begin); 
-            s.gen(begin, after); 
+            s.emitlabel(begin);
+
+            s.gen(begin, after);
+
             s.emitlabel(after);
         }
 
@@ -62,76 +61,60 @@ public class Parser {
         return s;
     }
 
-    // *** REVISÃO CRÍTICA: Lidar com Múltiplas Declarações e Funções ***
     void decls() throws IOException {
         while (look.tag == Tag.BASIC) { 
-            Type p = type(); // Processa o tipo (int, float, etc.)
-            
-            // Loop para processar múltiplos IDs separados por vírgula (se aplicável)
+            Type p = type();
             do {
                 Token tok = look;
-                match(Tag.ID); 
-                
-            
+                match(Tag.ID);
+
                 if (look.tag == '(') {
-                   
-                    error("Function declaration parsing not implemented yet. (e.g. test3_valid.txt)");
-              
+                    error("Function declaration parsing not implemented yet.");
                 }
 
-               
                 Id id = new Id((Word) tok, p, used); 
                 top.put(tok, id);
                 used = used + p.width;
-                
-               
+
                 if (look.tag == ',') {
                     move(); 
                 } else {
                     break; 
                 }
+            } while (true);
 
-            } while (true); // Loop para IDs separados por vírgula
-            
-            // Espera o ponto e vírgula final para a(s) declaração(ões)
             match(';');
         }
     }
 
-    Type type() throws IOException { // Type existe no pacote 'symbol'
-        Type p = (Type) look; // Type existe no pacote 'symbol'
+    Type type() throws IOException {
+        Type p = (Type) look;
         match(Tag.BASIC);
-        if (look.tag != '[') return p; // T -> basic
-        else return dims(p); // retorna tipo do arranjo
+        if (look.tag != '[') return p;
+        else return dims(p);
     }
 
     Type dims(Type p) throws IOException {
         match('[');
         Token tok = look;
-        match(Tag.NUM); // Tag.NUM existe no pacote 'lexer'
+        match(Tag.NUM);
         match(']');
         if (look.tag == '[') {
             p = dims(p);
         }
-        return new Array(((Num) tok).valor, p); // Array existe no pacote 'symbol', Num no 'lexer'
+        return new Array(((Num) tok).valor, p);
     }
 
     Stmt stmts() throws IOException {
-        // Se 'look' for nulo (fim de arquivo inesperado) ou se for '}', encerra.
-        if (look == null || look.tag == '}') { 
-             return Stmt.Null; // FIM da sequência de comandos
+        if (look == null || look.tag == '}') {
+            return Stmt.Null;
         }
-        
-        // **IMPORTANTE:** Se seu Lexer usa uma Tag alta para EOF (ex: 270)
-        // e retorna um token não-nulo, use a Tag aqui:
-        // if (look.tag == '}' || look.tag == Tag.EOF) { ...
-
-        else return new Seq(stmt(), stmts()); 
+        return new Seq(stmt(), stmts());
     }
 
     Stmt stmt() throws IOException {
         Expr x; 
-        Stmt s, s1, s2; 
+        Stmt s1, s2; 
         Stmt savedStmt; 
 
         switch (look.tag) {
@@ -140,7 +123,7 @@ public class Parser {
                 return Stmt.Null;
             case Tag.IF:
                 match(Tag.IF);
-                match('('); // Correção de sintaxe para IF
+                match('(');
                 x = bool();
                 match(')');
                 s1 = stmt();
@@ -178,21 +161,13 @@ public class Parser {
                 match(Tag.BREAK);
                 match(';');
                 return new Break(); 
-
             case Tag.PRINT:
-                Expr printExpr; 
-
                 match(Tag.PRINT); 
                 match('('); 
-                    
-               
-                printExpr = expr(); 
-                    
+                x = expr(); 
                 match(')');
                 match(';'); 
-                
-                // Cria e retorna o nó Print (necessita da classe Print no pacote intermediate)
-                return new Print(printExpr); 
+                return new Print(x); 
             case '{':
                 return block();
             default:

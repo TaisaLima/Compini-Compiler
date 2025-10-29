@@ -1,10 +1,11 @@
 package main;
 
 import java.io.*;
-import java.util.Scanner;
+import java.util.*;
+
 import lexer.Lexer;
 import parser.Parser;
-import intermediate.Codegen;
+import intermediate.*;
 
 public class Main {
 
@@ -29,24 +30,32 @@ public class Main {
         return temp;
     }
 
-    public static String compilarExpressao(String expressao) throws Exception {
-        File arquivo = criarArquivoTemporario(expressao);
-        Lexer lex = new Lexer(new FileReader(arquivo));
-        Parser parser = new Parser(lex);
+    public static void compilarExpressao(String expressao) {
+        try {
+            File arquivo = criarArquivoTemporario(expressao);
+            Lexer lex = new Lexer(new FileReader(arquivo));
+            Parser parser = new Parser(lex);
 
-        // Front-end: gera C3E
-        parser.program();
-        String c3e = parser.getC3E(); // precisa implementar no Parser
-        System.out.println("\n=== Código de 3 endereços ===");
-        System.out.println(c3e);
+            // Front-end: gera AST internamente
+            parser.program();
+            System.out.println("Compilação bem-sucedida!");
 
-        // Back-end: gera Assembly
-        Codegen codegen = new Codegen();
-        String asm = codegen.generate(c3e);
-        System.out.println("\n=== Código Assembly ===");
-        System.out.println(asm);
+        
+            if (parser.getC3E() != null) {
+                List<String> c3e = parser.getC3E();
+                System.out.println("\n=== Código de 3 endereços ===");
+                c3e.forEach(System.out::println);
 
-        return c3e;
+                // Back-end: gerar Assembly
+                Codegen codegen = new Codegen();
+                String asm = codegen.generate(String.join("\n", c3e));
+                System.out.println("\n=== Código Assembly ===");
+                System.out.println(asm);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Erro durante a compilação: " + e.getMessage());
+        }
     }
 
     public static void testarExpressaoManual() {
@@ -59,11 +68,7 @@ public class Main {
             return;
         }
 
-        try {
-            compilarExpressao(expressao);
-        } catch (Exception e) {
-            System.out.println("Erro durante a compilação: " + e.getMessage());
-        }
+        compilarExpressao(expressao);
     }
 
     public static void executarTestesProntos() {
@@ -89,12 +94,7 @@ public class Main {
         if (expressao == null) return;
 
         System.out.println("\nCompilando expressão: " + expressao);
-
-        try {
-            compilarExpressao(expressao);
-        } catch (Exception e) {
-            System.out.println("Erro durante a compilação: " + e.getMessage());
-        }
+        compilarExpressao(expressao);
     }
 
     public static void main(String[] args) {

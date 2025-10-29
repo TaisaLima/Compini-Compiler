@@ -1,4 +1,6 @@
 package intermediate;
+import lexer.*;
+import symbol.*;
 
 public class CodeBuffer {
     private static StringBuilder buffer = new StringBuilder();

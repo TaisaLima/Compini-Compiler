@@ -1,8 +1,10 @@
 
-package intermediate; 
-import lexer.*; 
-import symbol.*; 
+package parser.rules; 
 
+
+import lexer.*;
+import intermediate.*;
+import symbol.*;
 
 public class Print extends Stmt { 
     public Expr expr; 

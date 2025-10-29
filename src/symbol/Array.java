@@ -1,4 +1,5 @@
 package symbol;
+
 import lexer.*;
 
 public class Array extends Type{

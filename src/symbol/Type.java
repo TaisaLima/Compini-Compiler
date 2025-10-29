@@ -1,4 +1,5 @@
 package symbol;
+
 import lexer.*;
 
 public class Type extends Word{

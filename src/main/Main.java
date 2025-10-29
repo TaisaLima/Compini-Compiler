@@ -1,18 +1,123 @@
 package main;
+
 import java.io.*;
+import java.util.Scanner;
 import lexer.Lexer;
 import parser.Parser;
-
-
+import intermediate.Codegen;
 
 public class Main {
 
-    public static void Menu () {
-    System.out.println("---------Bem-vindo ao Compilador da linguagem Compini!--------");
-    System.out.println("\n");
-    System.out.println("Selecione a sua preferência       1. Testar o compilador manualmente         2. Explorar os testes disponíveis na nossa base de dados ");
+    public static void exibirMenu() {
+        System.out.println("==============================================================");
+        System.out.println("          COMPILADOR DA LINGUAGEM COMPINI      ");
+        System.out.println("==============================================================");
+        System.out.println("Escolha uma opção:");
+        System.out.println("1. Inserir uma expressão manualmente");
+        System.out.println("2. Executar testes automáticos");
+        System.out.println("3. Sair");
+        System.out.println("--------------------------------------------------------------");
+        System.out.print("Digite sua escolha: ");
     }
-    public static void main(String[] args) throws IOException{
-        Menu();
+
+    private static File criarArquivoTemporario(String expressao) throws IOException {
+        File temp = File.createTempFile("expr", ".txt");
+        temp.deleteOnExit();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(temp))) {
+            bw.write(expressao);
+        }
+        return temp;
+    }
+
+    public static String compilarExpressao(String expressao) throws Exception {
+        File arquivo = criarArquivoTemporario(expressao);
+        Lexer lex = new Lexer(new FileReader(arquivo));
+        Parser parser = new Parser(lex);
+
+        // Front-end: gera C3E
+        parser.program();
+        String c3e = parser.getC3E(); // precisa implementar no Parser
+        System.out.println("\n=== Código de 3 endereços ===");
+        System.out.println(c3e);
+
+        // Back-end: gera Assembly
+        Codegen codegen = new Codegen();
+        String asm = codegen.generate(c3e);
+        System.out.println("\n=== Código Assembly ===");
+        System.out.println(asm);
+
+        return c3e;
+    }
+
+    public static void testarExpressaoManual() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\nDigite a expressão aritmética que deseja compilar:");
+        String expressao = scanner.nextLine();
+
+        if (expressao.trim().isEmpty()) {
+            System.out.println("Expressão vazia! Tente novamente.");
+            return;
+        }
+
+        try {
+            compilarExpressao(expressao);
+        } catch (Exception e) {
+            System.out.println("Erro durante a compilação: " + e.getMessage());
+        }
+    }
+
+    public static void executarTestesProntos() {
+        System.out.println("\nSelecione um teste pré-definido:");
+        System.out.println("1. { int a; a = 5; print(a); }");
+        System.out.println("2. { int x, y; x = 10; y = x + 2; print(y); }");
+        System.out.println("3. 7 - 4 + 2");
+        System.out.println("4. Retornar ao menu principal");
+        System.out.print("Opção: ");
+
+        Scanner scanner = new Scanner(System.in);
+        int opcao = scanner.nextInt();
+        scanner.nextLine();
+
+        String expressao = switch (opcao) {
+            case 1 -> "{ int a; a = 5; print(a); }";
+            case 2 -> "{ int x, y; x = 10; y = x + 2; print(y); }";
+            case 3 -> "7 - 4 + 2";
+            case 4 -> { System.out.println(); yield null; }
+            default -> { System.out.println("Opção inválida!"); yield null; }
+        };
+
+        if (expressao == null) return;
+
+        System.out.println("\nCompilando expressão: " + expressao);
+
+        try {
+            compilarExpressao(expressao);
+        } catch (Exception e) {
+            System.out.println("Erro durante a compilação: " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int opcao;
+
+        do {
+            exibirMenu();
+            while (!scanner.hasNextInt()) {
+                System.out.println("Por favor, digite um número válido.");
+                scanner.next();
+            }
+            opcao = scanner.nextInt();
+            scanner.nextLine(); // consumir quebra de linha
+
+            switch (opcao) {
+                case 1 -> testarExpressaoManual();
+                case 2 -> executarTestesProntos();
+                case 3 -> System.out.println("Encerrando o compilador Compini... Até logo!");
+                default -> System.out.println("Opção inválida! Tente novamente.");
+            }
+            System.out.println();
+
+        } while (opcao != 3);
     }
 }

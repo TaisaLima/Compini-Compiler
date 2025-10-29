@@ -1,6 +1,7 @@
 package intermediate;
 import lexer.*;
 import symbol.*;
+import parser.rules.*;
 
 public class Constant extends Expr{
     public Constant(Token tok, Type z) {

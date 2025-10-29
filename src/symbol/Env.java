@@ -4,6 +4,7 @@ import java.util.Hashtable;
 import lexer.*;
 import intermediate.*;
 
+
 // Objetivo: Mapear os Tokens de Words aos Objetos da classe Id, representando a Tabela de Símbolos.
 public class Env {
     private Hashtable<Token, Id> tabela; 

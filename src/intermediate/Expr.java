@@ -14,23 +14,19 @@ public class Expr extends Node {
         this.op = tok;
         this.tipo = z;
     }
-
-   
+ 
     public Expr gen() {
         return this;
     }
-
-    // Redução de expressão (padrão: retorna a própria expressão)
+    
     public Expr reduce() {
         return this;
     }
 
-    // Método para saltos condicionais
     public void jumping(int t, int f) {
         emitjumps(toString(), t, f);
     }
 
-    // Emite código para saltos condicional e incondicional
     public void emitjumps(String test, int t, int f) {
         if (t != 0 && f != 0) {
             emit("if " + test + " goto L" + t);

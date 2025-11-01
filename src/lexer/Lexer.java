@@ -21,6 +21,17 @@ public class Lexer {
         reserve(new Word("do", Tag.DO));
         reserve(new Word("break", Tag.BREAK));
         reserve(new Word("print", Tag.PRINT)); 
+        reserve(new Word("seq", Tag.SEQ));    
+        reserve(new Word("par", Tag.PAR));     
+        reserve(new Word("send", Tag.SEND));  
+        reserve(new Word("receive", Tag.RECEIVE));
+        reserve(new Word("c_channel", Tag.C_CHANNEL));
+        reserve(new Word("input", Tag.INPUT)); 
+        reserve(new Word("output", Tag.OUTPUT)); 
+        reserve(new Word("string", Tag.STRING));
+        reserve(new Word("function", Tag.FUNCTION));
+        reserve(new Word("return", Tag.RETURN)); 
+
         reserve(Word.True);
         reserve(Word.False);
         reserve(Type.Int);

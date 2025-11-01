@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compilador Compini - Web Interface</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Área de Controles e Botões */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        #btn-compilar { background-color: #007bff; color: white; }
+        #btn-compilar:hover { background-color: #0056b3; }
+
+        #btn-testes { background-color: #28a745; color: white; }
+        #btn-testes:hover { background-color: #1e7e34; }
+
+        #btn-sair { background-color: #dc3545; color: white; }
+        #btn-sair:hover { background-color: #bd2130; }
+
+        /* Área de Input */
+        #input-area {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        /* Abas de Saída (Output) */
+        .tabs {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .tab-header {
+            display: flex;
+            background-color: #e9ecef;
+        }
+
+        .tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            border-bottom: 3px solid transparent;
+            transition: border-bottom 0.2s;
+            font-weight: bold;
+        }
+        
+        .tab-button.active {
+            background-color: white;
+            border-bottom: 3px solid #007bff;
+        }
+
+        .tab-content {
+            padding: 15px;
+            height: 300px; /* Altura fixa para as áreas de saída */
+            overflow-y: auto;
+            white-space: pre-wrap; /* Preserva formatação do texto */
+            background-color: #282c34; /* Fundo escuro para código */
+            color: #61afef;
+            font-family: monospace;
+            font-size: 13px;
+            display: none; /* Esconde todas as abas por padrão */
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Modal para Testes Prontos (Segunda "Janela") */
+        .modal {
+            display: none; /* Escondido por padrão */
+            position: fixed;
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto; /* 10% do topo e centralizado */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+        
+        .modal-content label { display: block; margin: 10px 0; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Compilador Compini - Front-end Web</h1>
+        
+        <div class="controls">
+            <button id="btn-compilar">1. Compilar Expressão Manualmente</button>
+            <button id="btn-testes">2. Executar Testes Prontos</button>
+            <button id="btn-sair">3. Sair</button>
+        </div>
+
+        <label for="input-area">Código Compini:</label>
+        <textarea id="input-area">int a; a = 5 * 2; print(a);</textarea>
+
+        <h2>Resultados da Compilação:</h2>
+        <div class="tabs">
+            <div class="tab-header">
+                <button class="tab-button active" onclick="openTab('log', this)">Status/Log</button>
+                <button class="tab-button" onclick="openTab('c3e', this)">Código 3 Endereços</button>
+                <button class="tab-button" onclick="openTab('asm', this)">Assembly</button>
+            </div>
+            
+            <pre id="log" class="tab-content active">Aguardando compilação...</pre>
+            <pre id="c3e" class="tab-content"></pre>
+            <pre id="asm" class="tab-content"></pre>
+        </div>
+    </div>
+    
+    <div id="testes-modal" class="modal">
+        <div class="modal-content">
+            <h3>Seleção de Testes Prontos</h3>
+            <p>Selecione um dos exemplos pré-definidos para compilar:</p>
+            
+            <div id="test-options">
+                </div>
+            
+            <button id="btn-executar-teste" style="background-color: #28a745; color: white;">Executar Teste Selecionado</button>
+            <button id="btn-fechar-modal" style="background-color: #6c757d; color: white;">Fechar</button>
+        </div>
+    </div>
+
+
+    <script>
+        // Mapeamento dos testes prontos (do seu código Java)
+        const TESTES_PRONTOS = {
+            'Teste 1': '{ int a; a = 5; print(a); }',
+            'Teste 2': '{ int x, y; x = 10; y = x + 2; print(y); }',
+            'Teste 3': '7 - 4 + 2'
+        };
+
+        // Elementos da Interface
+        const inputArea = document.getElementById('input-area');
+        const logOutput = document.getElementById('log');
+        const c3eOutput = document.getElementById('c3e');
+        const asmOutput = document.getElementById('asm');
+        const testesModal = document.getElementById('testes-modal');
+        const testOptionsDiv = document.getElementById('test-options');
+        
+        // --- 1. FUNÇÕES DE EXIBIÇÃO ---
+
+        /**
+         * Simula a lógica de compilação e preenche os outputs.
+         * @param {string} expressao O código Compini a ser compilado.
+         */
+        function compilarAcao(expressao) {
+            logOutput.textContent = "Iniciando compilação...\nCódigo de entrada: " + expressao.trim().substring(0, 50) + '...';
+            c3eOutput.textContent = "Aguardando geração...";
+            asmOutput.textContent = "Aguardando geração...";
+
+            if (expressao.trim() === "") {
+                alert("A expressão não pode ser vazia!");
+                logOutput.textContent = "ERRO: Expressão vazia.";
+                return;
+            }
+
+            // --- SIMULAÇÃO da Lógica de Compilação (Onde você integrará o back-end) ---
+            try {
+                // ** Simulação de Erro **: Se a expressão tiver "ERRO_SINTAXE"
+                if (expressao.includes("ERRO_SINTAXE")) {
+                    throw new Error("Erro de Sintaxe: Esperado ';' mas encontrado '}' inesperado.");
+                }
+                
+                // Simulação de Sucesso
+                const status = `Compilação bem-sucedida! \nTempo: ${Math.random().toFixed(2)}ms`;
+                const c3e = `t1 = 10 + 2\nt2 = x\nprint(y)\n\n(CÓDIGO DE TRÊS ENDEREÇOS GERADO)`;
+                const asm = `MOV R1, #10\nADD R1, R1, #2\nSTORE R1, Y\n\n(CÓDIGO ASSEMBLY GERADO)`;
+
+                logOutput.textContent = status;
+                c3eOutput.textContent = c3e;
+                asmOutput.textContent = asm;
+
+            } catch (error) {
+                // Tratamento de Erro (Similar ao JOptionPane no Java)
+                alert(`ERRO DE COMPILAÇÃO!\nDetalhes: ${error.message}`);
+                logOutput.textContent = `ERRO FATAL DURANTE A COMPILAÇÃO:\n${error.message}\n\nVerifique a expressão inserida.`;
+                c3eOutput.textContent = "Nenhum código C3E gerado devido ao erro.";
+                asmOutput.textContent = "Nenhum código Assembly gerado devido ao erro.";
+            }
+
+            // Sempre abre a aba de Status/Log após a compilação
+            openTab('log', document.querySelector('.tab-header button'));
+        }
+
+        /**
+         * Lida com a troca de abas (Status, C3E, Assembly).
+         * @param {string} tabId O ID da aba a ser aberta ('log', 'c3e', 'asm').
+         * @param {HTMLElement} tabButton O botão clicado.
+         */
+        function openTab(tabId, tabButton) {
+            // Remove 'active' de todos os conteúdos e botões
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+
+            // Adiciona 'active' ao conteúdo e botão selecionados
+            document.getElementById(tabId).classList.add('active');
+            tabButton.classList.add('active');
+        }
+
+        // --- 2. LÓGICA DO MODAL (SEGUNDA JANELA) ---
+
+        /**
+         * Abre a janela modal com as opções de teste.
+         */
+        function openTestesModal() {
+            // Limpa e recria as opções de teste
+            testOptionsDiv.innerHTML = '';
+            for (const nome in TESTES_PRONTOS) {
+                const expressao = TESTES_PRONTOS[nome];
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = 'teste-pronto';
+                input.value = expressao;
+                input.id = 'test-' + nome.replace(/\s/g, ''); // Garante ID único
+                
+                const label = document.createElement('label');
+                label.htmlFor = input.id;
+                label.textContent = nome + ': ' + expressao.substring(0, 30) + '...';
+                
+                testOptionsDiv.appendChild(input);
+                testOptionsDiv.appendChild(label);
+            }
+            testesModal.style.display = 'block'; // Exibe o modal
+        }
+
+        /**
+         * Fecha a janela modal.
+         */
+        function closeTestesModal() {
+            testesModal.style.display = 'none';
+        }
+
+        /**
+         * Executa o teste selecionado no modal.
+         */
+        function executarTesteSelecionado() {
+            const selectedRadio = document.querySelector('input[name="teste-pronto"]:checked');
+            if (selectedRadio) {
+                const expressao = selectedRadio.value;
+                inputArea.value = expressao; // Coloca o código na área de input principal
+                compilarAcao(expressao);     // Executa a compilação
+                closeTestesModal();          // Fecha o modal
+            } else {
+                alert('Por favor, selecione um teste primeiro.');
+            }
+        }
+
+        // --- 3. CONFIGURAÇÃO DE EVENTOS ---
+        
+        // 1. Botão Compilar
+        document.getElementById('btn-compilar').addEventListener('click', () => {
+            compilarAcao(inputArea.value);
+        });
+
+        // 2. Botão Testes Prontos
+        document.getElementById('btn-testes').addEventListener('click', openTestesModal);
+
+        // 3. Botão Sair
+        document.getElementById('btn-sair').addEventListener('click', () => {
+            alert('Encerrando o compilador Compini... Até logo!');
+            // Em uma aplicação real, você fecharia a aba ou faria uma limpeza
+            window.close(); // Tenta fechar a janela (depende da configuração do navegador)
+        });
+
+        // 4. Botões do Modal
+        document.getElementById('btn-executar-teste').addEventListener('click', executarTesteSelecionado);
+        document.getElementById('btn-fechar-modal').addEventListener('click', closeTestesModal);
+
+        // 5. Fechar modal clicando fora
+        window.addEventListener('click', (event) => {
+            if (event.target == testesModal) {
+                closeTestesModal();
+            }
+        });
+        
+    </script>
+
+</body>
+</html>

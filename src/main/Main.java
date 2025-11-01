@@ -2,10 +2,9 @@ package main;
 
 import java.io.*;
 import java.util.*;
-
 import lexer.Lexer;
 import parser.Parser;
-import intermediate.*;
+import intermediate.Codegen;
 
 public class Main {
 
@@ -40,7 +39,6 @@ public class Main {
             parser.program();
             System.out.println("Compilação bem-sucedida!");
 
-        
             if (parser.getC3E() != null) {
                 List<String> c3e = parser.getC3E();
                 System.out.println("\n=== Código de 3 endereços ===");
@@ -119,5 +117,48 @@ public class Main {
             System.out.println();
 
         } while (opcao != 3);
+    }
+
+    // ------------------ NOVO MÉTODO PARA WEB ------------------
+    public String compilarExpressaoParaWeb(String expressao) {
+        Map<String, String> resultado = new HashMap<>();
+        try {
+            File arquivo = criarArquivoTemporario(expressao);
+            Lexer lex = new Lexer(new FileReader(arquivo));
+            Parser parser = new Parser(lex);
+
+            parser.program(); // Gera AST internamente
+            resultado.put("log", "Compilação bem-sucedida!");
+
+            String c3e = "";
+            String asm = "";
+            if (parser.getC3E() != null) {
+                List<String> c3eList = parser.getC3E();
+                c3e = String.join("\n", c3eList);
+
+                Codegen codegen = new Codegen();
+                asm = codegen.generate(c3e);
+            }
+
+            resultado.put("c3e", c3e.isEmpty() ? "Nenhum código de 3 endereços gerado." : c3e);
+            resultado.put("asm", asm.isEmpty() ? "Nenhum código assembly gerado." : asm);
+
+        } catch (Exception e) {
+            resultado.put("log", "Erro: " + e.getMessage());
+            resultado.put("c3e", "");
+            resultado.put("asm", "");
+        }
+
+        // Converte o Map para JSON manualmente (alternativa simples)
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        int count = 0;
+        for (Map.Entry<String, String> entry : resultado.entrySet()) {
+            if (count++ > 0) sb.append(",");
+            sb.append("\"").append(entry.getKey()).append("\":")
+              .append("\"").append(entry.getValue().replace("\n", "\\n").replace("\"", "\\\"")).append("\"");
+        }
+        sb.append("}");
+        return sb.toString();
     }
 }

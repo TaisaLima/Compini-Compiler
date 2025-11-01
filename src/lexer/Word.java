@@ -17,5 +17,12 @@ public class Word extends Token{
             minus = new Word( "minus", Tag.MINUS ),
             True = new Word( "true", Tag.TRUE ),
             False = new Word( "false", Tag.FALSE ),
-            temp = new Word( "t", Tag.TEMP );
+            temp = new Word( "t", Tag.TEMP ),
+            SEQ = new Word("SEQ", Tag.SEQ),
+            PAR = new Word("PAR", Tag.PAR),
+            SEND = new Word("send", Tag.SEND),
+            RECEIVE = new Word("receive", Tag.RECEIVE),
+            INPUT = new Word("input", Tag.INPUT),
+            OUTPUT = new Word("output", Tag.OUTPUT),
+            C_CHANNEL = new Word("c_channel", Tag.C_CHANNEL);
 }

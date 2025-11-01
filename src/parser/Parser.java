@@ -6,14 +6,13 @@ import lexer.*;
 import symbol.*;
 import intermediate.*;
 import parser.rules.*;
-import parser.rules.Set; 
+import parser.rules.Set;
 
 public class Parser {
     private Lexer lex;
     private Token look;
     private Env top = null;
     private int used = 0;
-    
     private List<String> c3e = new ArrayList<>();
 
     public Parser(Lexer l) throws IOException {
@@ -26,16 +25,15 @@ public class Parser {
     }
 
     void error(String s) {
-        throw new Error("near line " + lex.line + ": " + s);
+        throw new Error("Erro próximo à linha " + lex.line + ": " + s);
     }
 
     void match(int t) throws IOException {
-        if (look == null) error("unexpected end of input, esperado " + (char) t);
+        if (look == null) error("Fim inesperado, esperado " + (char) t);
         if (look.tag == t) move();
-        else error("syntax error: esperado " + (char)t + " / obtido " + look);
+        else error("Esperado " + (char) t + ", encontrado " + look);
     }
 
-   
     public List<String> getC3E() {
         return c3e;
     }
@@ -61,29 +59,61 @@ public class Parser {
     }
 
     void decls() throws IOException {
-        while (look != null && look.tag == Tag.BASIC) {
-            Type p = type();
-            do {
-                Token tok = look;
-                match(Tag.ID);
-                if (look != null && look.tag == '(') {
-                    error("Function declarations not implemented yet.");
-                }
-                Id id = new Id((Word) tok, p, used);
-                top.put(tok, id);
-                used += p.width;
-                if (look != null && look.tag == ',') move();
-                else break;
-            } while (true);
-            match(';');
+        while (look != null && (look.tag == Tag.BASIC || look.tag == Tag.STRING || look.tag == Tag.FUNCTION)) {
+            if (look.tag == Tag.FUNCTION) {
+                funcDecl();
+            } else {
+                Type p = type();
+                do {
+                    Token tok = look;
+                    match(Tag.ID);
+                    Id id = new Id((Word) tok, p, used);
+                    top.put(tok, id);
+                    used += p.width;
+                    if (look != null && look.tag == ',') move();
+                    else break;
+                } while (true);
+                match(';');
+            }
         }
     }
 
+    void funcDecl() throws IOException {
+        match(Tag.FUNCTION);
+        Token funcName = look;
+        match(Tag.ID);
+        match('(');
+        List<Id> params = new ArrayList<>();
+        if (look.tag != ')') {
+            do {
+                Type p = type();
+                Token tok = look;
+                match(Tag.ID);
+                Id param = new Id((Word) tok, p, used);
+                used += p.width;
+                params.add(param);
+                top.put(tok, param);
+                if (look.tag == ',') move();
+                else break;
+            } while (true);
+        }
+        match(')');
+        Stmt body = block();
+        c3e.add("FUNCTION " + funcName.toString() + " BEGIN");
+        body.gen(0, 0);
+        c3e.add("FUNCTION " + funcName.toString() + " END");
+    }
+
     Type type() throws IOException {
-        Type p = (Type) look;
-        match(Tag.BASIC);
-        if (look != null && look.tag == '[') return dims(p);
-        else return p;
+        if (look.tag == Tag.STRING) {
+            move();
+            return Type.String;
+        } else {
+            Type p = (Type) look;
+            match(Tag.BASIC);
+            if (look != null && look.tag == '[') return dims(p);
+            else return p;
+        }
     }
 
     Type dims(Type p) throws IOException {
@@ -104,45 +134,44 @@ public class Parser {
 
     Stmt stmt() throws IOException {
         if (look == null) return Stmt.Null;
-
         Expr x;
-        Stmt s1, s2;
-        Stmt savedStmt;
+        Stmt s1, s2, savedStmt;
 
         switch (look.tag) {
             case ';':
                 move();
                 return Stmt.Null;
+
             case Tag.IF:
                 match(Tag.IF);
                 match('(');
                 x = bool();
                 match(')');
                 s1 = stmt();
-        
-                if (look == null || look.tag != Tag.ELSE) return new If(x, s1); 
-                match(Tag.ELSE);
-                s2 = stmt();
-        
-                return new Else(x, s1, s2);
+                if (look != null && look.tag == Tag.ELSE) {
+                    match(Tag.ELSE);
+                    s2 = stmt();
+                    return new Else(x, s1, s2);
+                }
+                return new If(x, s1);
+
             case Tag.WHILE:
-        
-                While whilenode = new While(); 
+                While wh = new While();
                 savedStmt = Stmt.Enclosing;
-                Stmt.Enclosing = whilenode;
+                Stmt.Enclosing = wh;
                 match(Tag.WHILE);
                 match('(');
                 x = bool();
                 match(')');
                 s1 = stmt();
-                whilenode.init(x, s1);
+                wh.init(x, s1);
                 Stmt.Enclosing = savedStmt;
-                return whilenode;
+                return wh;
+
             case Tag.DO:
-        
-                Do donode = new Do(); 
+                Do d = new Do();
                 savedStmt = Stmt.Enclosing;
-                Stmt.Enclosing = donode;
+                Stmt.Enclosing = d;
                 match(Tag.DO);
                 s1 = stmt();
                 match(Tag.WHILE);
@@ -150,56 +179,107 @@ public class Parser {
                 x = bool();
                 match(')');
                 match(';');
-                donode.init(s1, x);
+                d.init(s1, x);
                 Stmt.Enclosing = savedStmt;
-                return donode;
+                return d;
+
             case Tag.BREAK:
                 match(Tag.BREAK);
                 match(';');
-                c3e.add("break;"); 
-        
-                return new Break(); 
+                c3e.add("break;");
+                return new Break();
+
             case Tag.PRINT:
                 match(Tag.PRINT);
                 match('(');
                 x = expr();
                 match(')');
                 match(';');
-                c3e.add("print " + x.toString()); 
-        
-                return new Print(x); 
+                c3e.add("print " + x);
+                return new Print(x);
+
+            case Tag.SEQ:
+                match(Tag.SEQ);
+                match('{');
+                Stmt seqBlock = stmts();
+                match('}');
+                return new SeqBlock(Collections.singletonList(seqBlock));
+
+            case Tag.PAR:
+                match(Tag.PAR);
+                match('{');
+                List<Stmt> threads = new ArrayList<>();
+                while (look != null && look.tag != '}') {
+                    threads.add(stmt());
+                }
+                match('}');
+                return new ParBlock(threads, c3e);
+
+            case Tag.SEND:
+                match(Tag.SEND);
+                match('(');
+                Id canal = top.get(look);
+                match(Tag.ID);
+                match(',');
+                Expr msg = expr();
+                match(')');
+                match(';');
+                c3e.add("send " + ((Word)msg.op).lexema);
+                return new SendStmt(((Word)canal.op).lexema, c3e.toArray(new String[0]));
+
+
+            case Tag.RECEIVE:
+                match(Tag.RECEIVE);
+                match('(');
+                Id canalRecv = top.get(look);
+                match(Tag.ID);
+                match(',');
+                Id var = top.get(look);
+                match(Tag.ID);
+                match(')');
+                match(';');
+               
+                return new ReceiveStmt(
+                    ((Word)canalRecv.op).lexema, 
+                    ((Word)var.op).lexema
+                );
+
+            
+            case Tag.RETURN:
+                match(Tag.RETURN);
+                Expr retExpr = expr();
+                match(';');
+                c3e.add("return " + retExpr);
+                return new ReturnStmt(retExpr);
+
             case '{':
                 return block();
+
             default:
                 return assign();
         }
     }
 
     Stmt assign() throws IOException {
-        if (look == null) return Stmt.Null;
-        Stmt stmt;
         Token t = look;
         match(Tag.ID);
         Id id = top.get(t);
-        if (id == null) error(t.toString() + " undeclared");
+        if (id == null) error(t.toString() + " não declarado");
 
-        if (look != null && look.tag == '=') { // Atribuição simples: id = bool()
+        if (look.tag == '=') {
             move();
             Expr value = bool();
-            // 1️⃣ CORREÇÃO: Removido c3e do construtor
-            // 2️⃣ CORREÇÃO: 'Set' agora refere-se a 'parser.rules.Set' via import
-            stmt = new Set(id, value); 
-            c3e.add(id.toString() + " = " + value.toString()); 
-        } else { // Atribuição de array: id[..] = bool()
+            c3e.add(id.toString() + " = " + value.toString());
+            match(';');
+            return new Set(id, value);
+        } else {
             Acess x = offset(id);
             match('=');
             Expr value = bool();
-    
-            stmt = new SetElem(x, value); 
-            c3e.add(x.toString() + " = " + value.toString()); 
+            match(';');
+            c3e.add(x.toString() + " = " + value.toString());
+            return new SetElem(x, value);
         }
-        match(';');
-        return stmt;
     }
 
     Expr bool() throws IOException {
@@ -207,8 +287,7 @@ public class Parser {
         while (look != null && look.tag == Tag.OR) {
             Token tok = look;
             move();
-            
-            x = new Or(tok, x, join()); 
+            x = new Or(tok, x, join());
         }
         return x;
     }
@@ -218,8 +297,7 @@ public class Parser {
         while (look != null && look.tag == Tag.AND) {
             Token tok = look;
             move();
-            
-            x = new And(tok, x, equality()); 
+            x = new And(tok, x, equality());
         }
         return x;
     }
@@ -229,24 +307,17 @@ public class Parser {
         while (look != null && (look.tag == Tag.EQ || look.tag == Tag.NE)) {
             Token tok = look;
             move();
-            x = new Rel(tok, x, rel()); 
+            x = new Rel(tok, x, rel());
         }
         return x;
     }
 
     Expr rel() throws IOException {
         Expr x = expr();
-        if (look != null) {
-            switch (look.tag) {
-                case '<':
-                case Tag.LE:
-                case Tag.GE:
-                case '>':
-                    Token tok = look;
-                    move();
-                    
-                    return new Rel(tok, x, expr());
-            }
+        if (look != null && (look.tag == '<' || look.tag == Tag.LE || look.tag == Tag.GE || look.tag == '>')) {
+            Token tok = look;
+            move();
+            return new Rel(tok, x, expr());
         }
         return x;
     }
@@ -256,7 +327,7 @@ public class Parser {
         while (look != null && (look.tag == '+' || look.tag == '-')) {
             Token tok = look;
             move();
-            x = new Arith(tok, x, term()); 
+            x = new Arith(tok, x, term());
         }
         return x;
     }
@@ -266,28 +337,24 @@ public class Parser {
         while (look != null && (look.tag == '*' || look.tag == '/')) {
             Token tok = look;
             move();
-            x = new Arith(tok, x, unary()); 
+            x = new Arith(tok, x, unary());
         }
         return x;
     }
 
     Expr unary() throws IOException {
-        if (look != null) {
-            if (look.tag == '-') {
-                move();
-                return new Unary(Word.minus, unary()); 
-            } else if (look.tag == '!') {
-                Token tok = look;
-                move();
-                return new Not(tok, unary()); 
-            } else return factor();
-        }
-        return null;
+        if (look.tag == '-') {
+            move();
+            return new Unary(Word.minus, unary());
+        } else if (look.tag == '!') {
+            Token tok = look;
+            move();
+            return new Not(tok, unary());
+        } else return factor();
     }
 
     Expr factor() throws IOException {
-        if (look == null) return null;
-        Expr x = null;
+        Expr x;
         switch (look.tag) {
             case '(':
                 move();
@@ -310,15 +377,19 @@ public class Parser {
                 x = Constant.False;
                 move();
                 return x;
+            case Tag.STRING:
+                x = new StringExpr((Word) look,Type.String);
+                move();
+                return x;
             case Tag.ID:
                 Id id = top.get(look);
-                if (id == null) error(look.toString() + " undeclared");
+                if (id == null) error(look.toString() + " não declarado");
                 move();
-                if (look != null && look.tag == '[') return offset(id); 
-                else return id; 
+                if (look != null && look.tag == '[') return offset(id);
+                return id;
             default:
-                error("syntax error");
-                return x;
+                error("Erro de sintaxe");
+                return null;
         }
     }
 
@@ -330,19 +401,16 @@ public class Parser {
         match(']');
         type = ((Array) type).of;
         w = new Constant(type.width);
-      
-        t1 = new Arith(new Token('*'), i, w); 
+        t1 = new Arith(new Token('*'), i, w);
         loc = t1;
-        while (look != null && look.tag == '[') { 
+        while (look != null && look.tag == '[') {
             match('[');
             i = bool();
             match(']');
             type = ((Array) type).of;
             w = new Constant(type.width);
-            
-            t1 = new Arith(new Token('*'), i, w); 
-           
-            t2 = new Arith(new Token('+'), loc, t1); 
+            t1 = new Arith(new Token('*'), i, w);
+            t2 = new Arith(new Token('+'), loc, t1);
             loc = t2;
         }
         return new Acess(a, loc, type);

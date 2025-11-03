@@ -2,23 +2,25 @@ package main;
 
 import java.io.*;
 import java.util.*;
-import lexer.Lexer;
-import parser.Parser;
-import intermediate.Codegen;
+import main.lexer.*;
+import main.parser.*;
+import main.codegen.*;
+import main.runtime.server.*;
+import main.semantic.*;
 
 public class Main {
 
-    public static void exibirMenu() {
-        System.out.println("==============================================================");
-        System.out.println("          COMPILADOR DA LINGUAGEM COMPINI      ");
-        System.out.println("==============================================================");
-        System.out.println("Escolha uma opção:");
-        System.out.println("1. Inserir uma expressão manualmente");
-        System.out.println("2. Executar testes automáticos");
-        System.out.println("3. Sair");
-        System.out.println("--------------------------------------------------------------");
-        System.out.print("Digite sua escolha: ");
+    public static void InitializeServer () {
+        CompiniServer server = new CompiniServer();
+        new Thread(() -> {
+            try {
+                server.run(); // ou o método correto do seu servidor
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
+
 
     private static File criarArquivoTemporario(String expressao) throws IOException {
         File temp = File.createTempFile("expr", ".txt");
@@ -35,8 +37,7 @@ public class Main {
             Lexer lex = new Lexer(new FileReader(arquivo));
             Parser parser = new Parser(lex);
 
-            // Front-end: gera AST internamente
-            parser.program();
+            parser.parse();
             System.out.println("Compilação bem-sucedida!");
 
             if (parser.getC3E() != null) {
@@ -44,7 +45,6 @@ public class Main {
                 System.out.println("\n=== Código de 3 endereços ===");
                 c3e.forEach(System.out::println);
 
-                // Back-end: gerar Assembly
                 Codegen codegen = new Codegen();
                 String asm = codegen.generate(String.join("\n", c3e));
                 System.out.println("\n=== Código Assembly ===");
@@ -98,40 +98,27 @@ public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         int opcao;
-
-        do {
-            exibirMenu();
-            while (!scanner.hasNextInt()) {
-                System.out.println("Por favor, digite um número válido.");
-                scanner.next();
-            }
-            opcao = scanner.nextInt();
-            scanner.nextLine(); // consumir quebra de linha
-
-            switch (opcao) {
-                case 1 -> testarExpressaoManual();
-                case 2 -> executarTestesProntos();
-                case 3 -> System.out.println("Encerrando o compilador Compini... Até logo!");
-                default -> System.out.println("Opção inválida! Tente novamente.");
-            }
-            System.out.println();
-
-        } while (opcao != 3);
     }
 
-    // ------------------ NOVO MÉTODO PARA WEB ------------------
     public String compilarExpressaoParaWeb(String expressao) {
         Map<String, String> resultado = new HashMap<>();
+
         try {
+            // Cria arquivo temporário com o código recebido do front-end
             File arquivo = criarArquivoTemporario(expressao);
+
+            // Instancia o lexer e o parser
             Lexer lex = new Lexer(new FileReader(arquivo));
             Parser parser = new Parser(lex);
 
-            parser.program(); // Gera AST internamente
+            // Executa a compilação
+            parser.parse();
             resultado.put("log", "Compilação bem-sucedida!");
 
+            // Recupera código intermediário e assembly
             String c3e = "";
             String asm = "";
+
             if (parser.getC3E() != null) {
                 List<String> c3eList = parser.getC3E();
                 c3e = String.join("\n", c3eList);
@@ -149,16 +136,28 @@ public class Main {
             resultado.put("asm", "");
         }
 
-        // Converte o Map para JSON manualmente (alternativa simples)
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        int count = 0;
+        StringBuilder json = new StringBuilder("{");
+        int i = 0;
         for (Map.Entry<String, String> entry : resultado.entrySet()) {
-            if (count++ > 0) sb.append(",");
-            sb.append("\"").append(entry.getKey()).append("\":")
-              .append("\"").append(entry.getValue().replace("\n", "\\n").replace("\"", "\\\"")).append("\"");
+            if (i++ > 0) json.append(",");
+            json.append("\"").append(entry.getKey()).append("\": \"")
+                .append(escapeJson(entry.getValue())).append("\"");
         }
-        sb.append("}");
-        return sb.toString();
+        json.append("}");
+        return json.toString();
     }
+
+    /**
+     * Escapa caracteres especiais para JSON válido.
+     */
+    private String escapeJson(String text) {
+        if (text == null) return "";
+        return text.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "")
+                .replace("\t", "\\t");
+    }
+
+
 }

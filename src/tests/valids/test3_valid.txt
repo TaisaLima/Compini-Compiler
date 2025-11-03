@@ -1,5 +1,0 @@
-{
-int resultado;
-resultado = 5;
-print(resultado);
-}

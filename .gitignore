@@ -14,10 +14,6 @@ out/
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
-*.class
-*.jar
-*.iml
-.idea/
 
 ### NetBeans ###
 /nbproject/private/
@@ -29,5 +25,5 @@ bin/
 ### VS Code ###
 .vscode/
 
-build/
-*.log 
+### Mac OS ###
+.DS_Store

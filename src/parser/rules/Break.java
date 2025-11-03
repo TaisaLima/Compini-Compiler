@@ -1,0 +1,18 @@
+package parser.rules;
+
+
+import lexer.*;
+import symbol.*;
+
+public class Break extends Stmt{
+    Stmt stmt;
+    public Break(){
+        if(Stmt.Enclosing == null){
+            error("unenclosed break");
+        }
+        stmt = Stmt.Enclosing;
+    }
+    public void gen(int a, int b){
+        emit("goto L"+stmt.after);
+    }
+}

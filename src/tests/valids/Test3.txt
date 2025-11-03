@@ -1,0 +1,43 @@
+SEQ {
+    input input_val;
+    input output_desire;
+    var input_weight = 0.5;
+    var learning_rate = 0.01;
+
+    var bias = 1;
+    var bias_weight = 0.5;
+    var error = 1000.0;
+    var iteration = 0;
+    var sum_val;
+    var output;
+
+    
+    while (error != 0) {
+        iteration = iteration + 1;
+        print("#### Iteração: " + iteration);
+        print("Peso: " + input_weight);
+
+        sum_val = (input_val * input_weight) + (bias * bias_weight);
+
+  
+        if (sum_val >= 0) {
+            output = 1;
+        } else {
+            output = 0;
+        }
+
+        print("Saída: " + output);
+
+        error = output_desire - output;
+        print("Erro: " + error);
+
+        if (error != 0) {
+            input_weight = input_weight + (learning_rate * input_val * error);
+            print("Peso do bias: " + bias_weight);
+            bias_weight = bias_weight + (learning_rate * bias * error);
+        }
+    }
+
+    print("Parabéns!!! A Rede de um Neurônio Aprendeu");
+    print("Valor desejado: " + output_desire);
+}

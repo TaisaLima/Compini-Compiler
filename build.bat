@@ -1,5 +1,5 @@
 @echo off
-REM 
+REM Compila todo o projeto e coloca os .class em bin
 
 echo Compilando o projeto...
 javac -d bin src\main\Main.java src\lexer\*.java src\symbol\*.java src\intermediate\*.java src\parser\*.java src\parser\rules\*.java src\tests\*.java

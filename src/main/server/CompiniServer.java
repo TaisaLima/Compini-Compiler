@@ -1,5 +1,4 @@
-// src/main/java/web/CompiniServer.java
-package web;
+package main.server;
 
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;

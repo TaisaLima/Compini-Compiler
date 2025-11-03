@@ -4,7 +4,8 @@ import java.io.*;
 import java.util.*;
 import lexer.Lexer;
 import parser.Parser;
-import intermediate.Codegen;
+import intermediate.*;
+import symbol.*;
 
 public class Main {
 
@@ -44,11 +45,11 @@ public class Main {
                 System.out.println("\n=== Código de 3 endereços ===");
                 c3e.forEach(System.out::println);
 
-                // Back-end: gerar Assembly
+              /**  // Back-end: gerar Assembly
                 Codegen codegen = new Codegen();
                 String asm = codegen.generate(String.join("\n", c3e));
                 System.out.println("\n=== Código Assembly ===");
-                System.out.println(asm);
+                System.out.println(asm);  */
             }
 
         } catch (Exception e) {
@@ -135,9 +136,6 @@ public class Main {
             if (parser.getC3E() != null) {
                 List<String> c3eList = parser.getC3E();
                 c3e = String.join("\n", c3eList);
-
-                Codegen codegen = new Codegen();
-                asm = codegen.generate(c3e);
             }
 
             resultado.put("c3e", c3e.isEmpty() ? "Nenhum código de 3 endereços gerado." : c3e);
